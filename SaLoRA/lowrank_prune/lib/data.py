@@ -111,7 +111,7 @@ def get_alpaca(nsamples, seed, seqlen, tokenizer, disentangle=False, dataset="al
         response_enc = tokenizer(response, add_special_tokens=False, return_tensors="pt")
 
         inp = torch.cat(
-            (prompt_enc.input_ids, response_enc.input_ids), dim=1
+            (prompt_enc, response_enc.input_ids), dim=1
         )
 
         prompt_len = prompt_enc.shape[1]

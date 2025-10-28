@@ -97,7 +97,7 @@ def main(config_path, save_folder):
 
     tokenizer = AutoTokenizer.from_pretrained(aligned_model_path)
     # tokenizer.pad_token_id = tokenizer.eos_token_id
-    model = AutoModelForCausalLM.from_pretrained(aligned_model_path, device=device, dtype=dtype_map[config.dtype], attn_implementation=config.attn_implementation)
+    model = AutoModelForCausalLM.from_pretrained(aligned_model_path, device=device, dtype=dtype_map[config.dtype]) #, attn_implementation=config.attn_implementation)
 
     target_module_list = config.target_modules
 
@@ -343,7 +343,7 @@ def main(config_path, save_folder):
     torch.cuda.empty_cache()
 
     # LoRA training
-    prompts = []
+    # prompts = []
     logging.info("loading dataset")
 
     data_path = config.data_path
@@ -357,26 +357,12 @@ def main(config_path, save_folder):
     train_ds = train_ds.map(template_func, remove_columns=og_cols)
     val_ds = val_ds.map(template_func, remove_columns=og_cols)
 
-    # rows = []
-    # for i in range(len(train_ds)):
-    #     sample = train_ds[i]
-    #     input = sample['instruction'] + ': ' + sample['input']
-    #     output = sample['output']
-    #     rows.append([i, input, output])
-
-    # header = ['index', 'prompt', 'response']
-    # with open("/content/drive/MyDrive/CAISI_phase2/SaLoRA-finetuning/SaLoRA-Repo/lowrank_prune/data/alpaca_5k_train.csv", "w") as f:
-    #     writer = csv.writer(f)
-    #     writer.writerow(header)
-    #     for row in rows:
-    #         writer.writerow(row)
-
-    # df = Dataset.from_list(prompts)
     training_args = TrainingArguments(
         # args.name+"_"+str(rank)+"_"+str(args.lr)+'_'+str(args.wd)+"/",
         learning_rate=config.lr,
         lr_scheduler_type=config.lr_scheduler_type,
-        warmup_ratio=config.warmup_ratiom
+        use_liger_kernel=config.use_liger_kernel,
+        warmup_ratio=config.warmup_ratio,
         weight_decay=config.wd,
         optim=config.optim,
         gradient_checkpointing=config.use_gradient_checkpointing,
@@ -398,20 +384,6 @@ def main(config_path, save_folder):
         output_dir=save_folder,
         eos_token=tokenizer.eos_token
     )
-    # user_prompt = traindata_sampled["prompt"][i]
-    # assistant_response = traindata_sampled["response"][i]
-    # formatted_messages = [
-    #     {"role": "user", "content": user_prompt},
-    #     {"role": "assistant", "content": assistant_response},
-    # ]
-    
-    # tokenized_datasets = df.map(tokenize_function, batched=True, num_proc=4, remove_columns=["text"])
-    # lm_datasets = tokenized_datasets.map(
-    # group_texts,
-    # batched=True,
-    # batch_size=1024,
-    # num_proc=4,
-    # )
 
     trainer = Trainer(
     model=model, # peft model
@@ -420,6 +392,42 @@ def main(config_path, save_folder):
     eval_dataset=val_ds,
     processing_class=tokenizer
     )
+
+    # run with SFT
+    # training_args = SFTConfig(
+    #     # args.name+"_"+str(rank)+"_"+str(args.lr)+'_'+str(args.wd)+"/",
+    #     learning_rate=config.lr,
+    #     lr_scheduler_type=config.lr_scheduler_type,
+    #     warmup_ratio=config.warmup_ratio,
+    #     weight_decay=config.wd,
+    #     optim=config.optim,
+    #     gradient_checkpointing=config.use_gradient_checkpointing,
+    #     per_device_train_batch_size=config.bs,
+    #     gradient_accumulation_steps=config.gradient_accumulation_steps,
+    #     max_length=config.max_seq_length,
+    #     packing=config.use_packing,
+    #     num_train_epochs=config.num_epochs,
+    #     save_only_model = False,
+    #     eval_strategy = config.eval_strategy,
+    #     save_strategy = config.save_strategy,
+    #     logging_first_step=True,
+    #     logging_strategy=config.logging_strategy,
+    #     logging_steps=config.logging_steps,
+    #     logging_dir=save_folder,
+    #     log_level="info",
+    #     seed=config.random_state,
+    #     report_to = "none",
+    #     output_dir=save_folder,
+    #     eos_token=tokenizer.eos_token
+    # )
+
+    # trainer = SFTTrainer(
+    # model=model, # peft model
+    # args=training_args,
+    # train_dataset=train_ds,
+    # eval_dataset=val_ds,
+    # processing_class=tokenizer
+    # )
 
     trainer.train()
 

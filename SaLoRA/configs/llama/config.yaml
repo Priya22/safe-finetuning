@@ -1,6 +1,7 @@
 ---
 random_state: 5
 attn_implementation: "flash_attention_3" #flash_attention_3, flash_attention_2, eager
+use_liger_kernel: false
 rank: 16
 rs: 32 #safety rank for SVD of safe activations
 ds: 32 #task rank for SVD of task activations

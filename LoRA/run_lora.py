@@ -60,7 +60,7 @@ class LoraFT:
         
 
         model = AutoModelForCausalLM.from_pretrained(config.base_model_path,
-               torch_dtype=dtype_map[config.dtype])
+               torch_dtype=dtype_map[config.dtype]) #, attn_implementation=config.attn_implementation)
         # model = prepare_model_for_kbit_training(model)
 
         tokenizer = AutoTokenizer.from_pretrained(config.base_model_path)
@@ -141,19 +141,6 @@ class LoraFT:
                 completion_only_loss=config.completion_only_loss,
                 eos_token=tokenizer.eos_token
             )
-        
-        # use_cache=True
-        # use_reentrant = False
-        # gradient_checkpointing=False
-        # if config.use_gradient_checkpointing:
-        #     model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
-        #     use_cache = False
-            # use_reentrant = True
-            # gradient_checkpointing = True
-        
-        # model.config.use_cache = use_cache
-        # training_args.gradient_checkpointing = gradient_checkpointing
-        # training_args.gradient_checkpointing_kwargs = {"use_reentrant": use_reentrant}
         
         trainer = SFTTrainer(
                 model = model,
