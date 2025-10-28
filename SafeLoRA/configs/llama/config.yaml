@@ -1,0 +1,9 @@
+---
+base_model_path: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+aligned_model_path: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+peft_model_path: ""
+device: "cuda"
+select_layers_type: "threshold"
+threshold: 0.5
+num_proj_layers: 5
+dtype: "float16"

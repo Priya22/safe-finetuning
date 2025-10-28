@@ -1,0 +1,31 @@
+---
+random_state: 5
+attn_implementation: "flash_attention_3" #flash_attention_3, flash_attention_2, eager
+rank: 16
+rs: 32 #safety rank for SVD of safe activations
+ds: 32 #task rank for SVD of task activations
+target_modules:
+  - q_proj
+  - v_proj
+data_path: "../../../ft_datasets/alpaca_clean_sample_5k"
+data_template: "alpaca"
+base_model_path: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+dtype: "float16"
+device: "cuda"
+eval_strategy: "epoch"
+save_strategy: "epoch"
+logging_strategy: "steps"
+logging_steps: 10
+bs: 16
+gradient_accumulation_steps: 1
+use_gradient_checkpointing: true
+use_packing: false
+lr: 2e-4
+wd: 0.01
+optim: "adamw_torch_fused"
+lr_scheduler_type: "linear"
+warmup_ratio: 0.05
+max_seq_length: 8192
+num_epochs: 5
+
+

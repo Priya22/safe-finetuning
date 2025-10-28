@@ -1,0 +1,46 @@
+{
+  "builder_name": "json",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "alpaca_clean_sample_5k",
+  "dataset_size": 3911705,
+  "description": "",
+  "download_checksums": {
+    "/content/drive/MyDrive/CAISI_phase2/qlora-finetuning/tune_datasets/alpaca_clean_sample_5k/alpaca_clean_5k.jsonl": {
+      "num_bytes": 4100892,
+      "checksum": null
+    }
+  },
+  "download_size": 4100892,
+  "features": {
+    "output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "input": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "instruction": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 8012597,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 3911705,
+      "num_examples": 5000,
+      "dataset_name": "alpaca_clean_sample_5k"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}
