@@ -62,11 +62,11 @@ class LoraFT:
         
 
         model = AutoModelForCausalLM.from_pretrained(config.base_model_path,
-               torch_dtype=dtype_map[config.dtype]) #, attn_implementation=config.attn_implementation)
+               dtype=dtype_map[config.dtype]) #, attn_implementation=config.attn_implementation)
         # model = prepare_model_for_kbit_training(model)
 
         tokenizer = AutoTokenizer.from_pretrained(config.base_model_path)
-        tokenizer.pad_token = tokenizer.eos_token
+        # tokenizer.pad_token = tokenizer.eos_token
 
         return model, tokenizer
     
@@ -182,7 +182,7 @@ def main(config_path, save_folder):
     logging.info("Read config from {}".format(config_path))
     logging.info("Config: {}".format(config))
     # logging.info("random state: {}".format(random_state))
-    config.to_yaml(filename=os.path.join(save_folder, "config.yaml"))
+    config.to_yaml(filename=os.path.join(save_folder, "training_config.yaml"))
     logging.info("Init Model and Dataset..")
 
     tuner = LoraFT(config=config, save_folder=save_folder)
