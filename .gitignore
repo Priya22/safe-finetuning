@@ -1,0 +1,6 @@
+SaLoRA/outputs/
+LoRA/outputs/
+SafeLoRA/outputs/
+*/.ipynb_checkpoints
+*.arrow
+*/__pycache__

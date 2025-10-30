@@ -24,7 +24,7 @@ lora_dropout: 0.05
 lora_rank: 16
 use_gradient_checkpointing: true
 #finetuning data
-data_path: "../../../ft_datasets/alpaca_clean_sample_5k"
+data_path: "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_datasets/alpaca_clean_sample_5k"
 data_template: "alpaca" #alpaca or dolly
 completion_only_loss: false # for huggingface
 #SFT Trainer
@@ -35,7 +35,7 @@ max_grad_norm: 1.0
 warmup_ratio: 0.05
 lr_scheduler_type: "linear"
 num_train_epochs: 5
-learning_rate: 2e-4
+learning_rate: 0.0002
 save_strategy: "epoch"
 eval_strategy: "epoch"
 eval_steps: 50 #only if eval_strategy is steps

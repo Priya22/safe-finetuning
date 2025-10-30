@@ -42,26 +42,23 @@ def get_align(nsamples, seed, seqlen, tokenizer, disentangle=False, mode="base")
     for i in range(nsamples):
         user_prompt = traindata_sampled["input"][i]
         assistant_response = traindata_sampled["output"][i]
-
-        formatted_inp = [
-            {"role": "user", "content": user_prompt}
-        ]
-        
+        formatted_inp = [{"role": "user", "content": user_prompt}]
         prompt_enc = tokenizer.apply_chat_template(
-            formatted_inp,
-            tokenize=True,
-            return_tensors="pt",
-            add_generation_prompt=True
+        formatted_inp,
+           tokenize=True,
+           return_tensors="pt",
+           add_generation_prompt=True
         )
-
-        response_enc = tokenizer(assistant_response, add_special_tokens=False, return_tensors="pt")
-
-        inp = torch.cat(
-            (prompt_enc.input_ids, response_enc.input_ids), dim=1
+        response_enc = tokenizer(
+            assistant_response,
+            add_special_tokens=False,
+            return_tensors="pt"
         )
-
-        prompt_len = prompt_enc['input_ids'].shape[1]
-
+        
+        inp = torch.cat((prompt_enc, response_enc["input_ids"]), dim=1)
+        
+        prompt_len = prompt_enc.shape[1]
+        
         tar = inp.clone()
         tar[:, :prompt_len] = -100
         trainloader.append((inp, tar))
@@ -92,11 +89,14 @@ def get_wikitext2(nsamples, seed, seqlen, tokenizer):
 
 def get_alpaca(nsamples, seed, seqlen, tokenizer, disentangle=False, dataset="alpaca_train"):
     data_files = {"no_safety_train": "lowrank_prune/data/alpaca_cleaned_no_safety_train.csv", 
-                  "alpaca_train": "../tune_datasets/alpaca_clean_sample_5k/train"}
+                  "alpaca_train": "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_datasets/alpaca_clean_sample_5k"}
 
     # traindata = load_dataset("csv", data_files=data_files, split="train")
     traindata = load_from_disk(data_files[dataset])
+    if isinstance(traindata, dict) or "train" in traindata:
+        traindata = traindata["train"]
     random.seed(seed)
+    
     # Encode datasets
     trainloader = []
     # if disentangle:

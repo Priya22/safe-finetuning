@@ -6,9 +6,8 @@ from lowrank_prune.lib.data import get_loaders
 from peft import LoraConfig, get_peft_model
 import time
 
-from trl import SFTTrainer
+from trl import SFTTrainer, SFTConfig
 from datasets import load_dataset, Dataset
-from transformers import Trainer, TrainingArguments
 from fastchat.conversation import get_conv_template
 from tqdm import tqdm
 
@@ -44,7 +43,6 @@ def convert_to_template_from_alpaca(example):
                          {"role": "assistant", "content": example['output']}
                         ]
            }
-
 
 
 TEMPLATE_FUNC_MAP = {
@@ -97,7 +95,7 @@ def main(config_path, save_folder):
 
     tokenizer = AutoTokenizer.from_pretrained(aligned_model_path)
     # tokenizer.pad_token_id = tokenizer.eos_token_id
-    model = AutoModelForCausalLM.from_pretrained(aligned_model_path, device=device, dtype=dtype_map[config.dtype]) #, attn_implementation=config.attn_implementation)
+    model = AutoModelForCausalLM.from_pretrained(aligned_model_path, device_map="auto", dtype=dtype_map[config.dtype]) #, attn_implementation=config.attn_implementation)
 
     target_module_list = config.target_modules
 
@@ -129,7 +127,7 @@ def main(config_path, save_folder):
             module.record_activation = False
             module.clear_act_buffer()
 
-    dataloader, _ = get_loaders(
+    dataloader = get_loaders(
         "alpaca_train",
         nsamples=128,
         seed=0,
@@ -137,7 +135,7 @@ def main(config_path, save_folder):
         tokenizer=tokenizer,
         disentangle=True,
     )
-    dataloader_safe, _ = get_loaders(
+    dataloader_safe = get_loaders(
         'align_short',
         nsamples=128,
         seed=0,
@@ -357,7 +355,7 @@ def main(config_path, save_folder):
     train_ds = train_ds.map(template_func, remove_columns=og_cols)
     val_ds = val_ds.map(template_func, remove_columns=og_cols)
 
-    training_args = TrainingArguments(
+    training_args = SFTConfig(
         # args.name+"_"+str(rank)+"_"+str(args.lr)+'_'+str(args.wd)+"/",
         learning_rate=config.lr,
         lr_scheduler_type=config.lr_scheduler_type,
@@ -385,12 +383,12 @@ def main(config_path, save_folder):
         eos_token=tokenizer.eos_token
     )
 
-    trainer = Trainer(
-    model=model, # peft model
-    args=training_args,
-    train_dataset=train_ds,
-    eval_dataset=val_ds,
-    processing_class=tokenizer
+    trainer = SFTTrainer(
+        model=model, # peft model
+        args=training_args,
+        train_dataset=train_ds,
+        eval_dataset=val_ds,
+        processing_class=tokenizer
     )
 
     # run with SFT

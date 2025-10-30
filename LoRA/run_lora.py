@@ -10,7 +10,7 @@ import peft
 import trl
 from peft import LoraConfig
 from trl import SFTTrainer, SFTConfig
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 
 from peft import get_peft_model, prepare_model_for_kbit_training
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
@@ -19,6 +19,8 @@ from trl import apply_chat_template
 import argparse
 import logging
 import time
+
+os.environ["WANDB_DISABLED"] = "true"
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config_path', help='path to config file', required=True)
@@ -75,8 +77,8 @@ class LoraFT:
         # data_path = config.data_path
         data_format = config.data_template
 
-        train_ds = load_dataset(os.path.join(config.data_path, "train"))
-        val_ds = load_dataset(os.path.join(config.data_path, "test"))
+        train_ds = load_from_disk(os.path.join(config.data_path, "train"))
+        val_ds = load_from_disk(os.path.join(config.data_path, "test"))
         logging.info("Dataset info: {} ".format(train_ds.info))
         og_cols = list(train_ds.column_names)
 
