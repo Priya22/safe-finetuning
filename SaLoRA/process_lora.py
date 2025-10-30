@@ -48,26 +48,29 @@ def process_checkpoint(checkpoint_folder, weight_list):
     save_file(a, os.path.join(checkpoint_folder, 'adapter_model.safetensors'))
 
 
-def update_qv(checkpoint_folder, weight_list):
-    current_num = 0
+# def update_qv(checkpoint_folder, weight_list):
 
-    model = AutoModelForCausalLM.from_pretrained(checkpoint_folder)
-    for name, module in model.named_modules():
-        if 'self_attn.qkv_proj.base_layer' in name:
-            print(module.weight.size(), weight_list['q_proj_'+str(current_num//2)+'weight'].size())
-            print(name,'q_proj_'+str(current_num//2)+'weight')
+    # this is to integrate LoRA with the main model for vLLM inference -- not needed at all if we use the adapters as is.
+    
+#     current_num = 0
 
-            tmp_data = torch.cat([weight_list['q_proj_'+str(current_num//2)+'weight'].to(module.weight.dtype).to(module.weight.device), 
-                                            module.weight.data[weight_list['q_proj_'+str(current_num//2)+'weight'].size(0):-weight_list['v_proj_'+str(current_num//2)+'weight'].size(0),:],
-                                            weight_list['v_proj_'+str(current_num//2)+'weight'].to(module.weight.dtype).to(module.weight.device)],dim=0)
-            print('final_size',module.weight.size(), tmp_data.size())
+#     model = AutoModelForCausalLM.from_pretrained(checkpoint_folder)
+#     for name, module in model.named_modules():
+#         if 'self_attn.qkv_proj.base_layer' in name:
+#             print(module.weight.size(), weight_list['q_proj_'+str(current_num//2)+'weight'].size())
+#             print(name,'q_proj_'+str(current_num//2)+'weight')
+
+#             tmp_data = torch.cat([weight_list['q_proj_'+str(current_num//2)+'weight'].to(module.weight.dtype).to(module.weight.device), 
+#                                             module.weight.data[weight_list['q_proj_'+str(current_num//2)+'weight'].size(0):-weight_list['v_proj_'+str(current_num//2)+'weight'].size(0),:],
+#                                             weight_list['v_proj_'+str(current_num//2)+'weight'].to(module.weight.dtype).to(module.weight.device)],dim=0)
+#             print('final_size',module.weight.size(), tmp_data.size())
             
-            module.weight.copy_(tmp_data)
-            print(torch.norm(module.weight), torch.norm(tmp_data))
-            current_num += 2
+#             module.weight.copy_(tmp_data)
+#             print(torch.norm(module.weight), torch.norm(tmp_data))
+#             current_num += 2
 
-    print("Saving model to {}".format(checkpoint_folder))
-    model.save_pretrained(checkpoint_folder)
+#     print("Saving model to {}".format(checkpoint_folder))
+#     model.save_pretrained(checkpoint_folder)
 
 # if __name__ == '__main__':
 #     main()
