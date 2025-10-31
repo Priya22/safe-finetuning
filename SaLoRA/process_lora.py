@@ -13,6 +13,8 @@ from transformers import Trainer, TrainingArguments
 from fastchat.conversation import get_conv_template
 from tqdm import tqdm
 
+import re
+
 # def parse_args():
 #     parser = argparse.ArgumentParser(description='Brisque')
 #     parser.add_argument('--main_path', default="./out/Falsellama2_commonsense_olora_output/llama2_output_alphca_chat7b_act12_rank32True_16_0.0001_0.0/checkpoint-4208", help='path to input image file')
@@ -38,12 +40,14 @@ def process_checkpoint(checkpoint_folder, weight_list):
 
     num_layers = max(weight_layer_nums)+1 # TBD: automatically find
 
+    print("num layers: ", num_layers)
+
     for idx in range(num_layers):
 
         a['base_model.model.model.layers.'+str(idx)+'.self_attn.q_proj.lora_B.weight'] = weight_list['q_proj_'+str(idx)+'lora_C'] @ a['base_model.model.model.layers.'+str(idx)+'.self_attn.q_proj.lora_B.weight']
         a['base_model.model.model.layers.'+str(idx)+'.self_attn.v_proj.lora_B.weight'] = weight_list['v_proj_'+str(idx)+'lora_C'] @ a['base_model.model.model.layers.'+str(idx)+'.self_attn.v_proj.lora_B.weight']
 
-    print("update finished. Saving to {}/adapter_model.safetensors")
+    print("update finished. Saving to {}/adapter_model.safetensors".format(checkpoint_folder))
 
     save_file(a, os.path.join(checkpoint_folder, 'adapter_model.safetensors'))
 

@@ -1,6 +1,7 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import os
+import gc
 from lowrank_prune.lib.model_wrapper_low import *
 from lowrank_prune.lib.data import get_loaders
 from peft import LoraConfig, get_peft_model
@@ -11,7 +12,7 @@ from datasets import load_dataset, Dataset
 from fastchat.conversation import get_conv_template
 from tqdm import tqdm
 
-from process_lora import process_checkpoint, update_qv
+from process_lora import process_checkpoint
 
 import logging
 import datasets
@@ -60,7 +61,7 @@ def process_checkpoints(save_folder):
     weight_list = torch.load(abc_path, map_location=torch.device('cpu'))
     print("Load weight list finished")
 
-    checkpoints = []
+    # checkpoints = []
     for cf in os.path.scandir(save_folder):
         if "checkpoint-" in cf.name:
             print("processing {}".format(cf.path))
@@ -83,6 +84,8 @@ def main(config_path, save_folder):
     # save config to save folder
 
     config.to_yaml(os.path.join(save_folder, 'training_config.yaml'))
+
+    print(config)
 
     # args.name = 'out/'+str(args.rs)+'_'+str(args.ds)+str(args.more_module)+'llama3.1_alpaca_output/llama3.1_' + args.name +'_rank'+str(args.rank_s)
     # try:
@@ -107,21 +110,12 @@ def main(config_path, save_folder):
 
     rank = config.rank
     n_iter=30
-    
-    peft_config = LoraConfig(
-        r = rank,
-        lora_alpha = rank, # lora_alpha should match r to maintain scaling = 1
-        lora_dropout = 0,
-        inference_mode=False,
-        init_lora_weights=False, # PiSSA initialization
-        target_modules = target_module_list,
-        task_type="CAUSAL_LM",
-    )
+
     
     t1 = time.time()
     model = make_Act(model, verbose=False)
     model.requires_grad_(False)
-    model.seqlen = 4096
+    # model.seqlen = 4096
     clear_act_buffer(model)
     
     for name, module in model.named_modules():
@@ -133,7 +127,7 @@ def main(config_path, save_folder):
         "alpaca_train",
         nsamples=128,
         seed=0,
-        seqlen=model.seqlen,
+        seqlen=4096,
         tokenizer=tokenizer,
         disentangle=True,
     )
@@ -141,7 +135,7 @@ def main(config_path, save_folder):
         'align_short',
         nsamples=128,
         seed=0,
-        seqlen=model.seqlen,
+        seqlen=4096,
         tokenizer=tokenizer,
         disentangle=True,
     )
@@ -178,7 +172,7 @@ def main(config_path, save_folder):
                         f_name = t_name
                         break
                 if len(f_name)==0:
-                    print("Wrong name ", name)
+                    # print("Wrong name ", name)
                     continue
                 current_num += 1
                 layer_n =f_name
@@ -275,27 +269,40 @@ def main(config_path, save_folder):
                 weight_list[layer_n+'_'+str(current_num//divide_num)+'lora_B'] = U2 @ torch.diag(torch.sqrt(S2))
                 weight_list[layer_n+'_'+str(current_num//divide_num)+'lora_B'] = V @ V.T @ weight_list[layer_n+'_'+str(current_num//divide_num)+'lora_B']
                 weight_list[layer_n+'_'+str(current_num//divide_num)+'lora_A'] = torch.diag(torch.sqrt(S2)) @ V2.T
+                
                 module.base.weight.data.sub_(
                     weight_list[layer_n+'_'+str(current_num//divide_num)+'lora_C'] @ weight_list[layer_n+'_'+str(current_num//divide_num)+'lora_B'] @ weight_list[layer_n+'_'+str(current_num//divide_num)+'lora_A'])
+                
                 weight_list[layer_n+'_'+str(current_num//divide_num)+'weight'] = module.base.weight.data
                 # print(weight_list[layer_n+'_'+str(current_num//divide_num)+'lora_B'].size(), weight_list[layer_n+'_'+str(current_num//divide_num)+'lora_A'].size())
-            # torch.cuda.empty_cache()
+                # torch.cuda.empty_cache()
 
-    # disable recording for the current layer.
+        # disable recording for the current layer.
         for name, module in model.named_modules():
             if layer_filter_fn(name) and isinstance(module, ActLinear):
                 # print("disabling recording for ", name)
                 module.record_activation = False
                 module.clear_act_buffer()
+    
     t2 = time.time()
     print("Time cost", t2-t1)
     model = revert_Act_to_Linear(model)
     model.zero_grad()
+
+    peft_config = LoraConfig(
+        r = rank,
+        lora_alpha = rank, # lora_alpha should match r to maintain scaling = 1
+        lora_dropout = 0,
+        inference_mode=False,
+        init_lora_weights=False, # PiSSA initialization
+        target_modules = target_module_list,
+        task_type="CAUSAL_LM",
+    )
     model = get_peft_model(model, peft_config)
     model.print_trainable_parameters()
     # print(model.parameters())
 
-    print(weight_list.keys())
+    # print(weight_list.keys())
 
     module_counters = {t_name: 0 for t_name in target_module_list}
 
@@ -340,11 +347,15 @@ def main(config_path, save_folder):
     # os.makedirs(os.path.dirname(save_path), exist_ok = True)    
     torch.save(weight_list, save_path)
     del weight_list
+    del dataloader
+    del dataloader_safe
+
+    gc.collect()
     torch.cuda.empty_cache()
 
     # LoRA training
     # prompts = []
-    logging.info("loading dataset")
+    print("loading dataset")
 
     data_path = config.data_path
     dataset = datasets.load_from_disk(data_path)
