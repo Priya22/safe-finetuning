@@ -6,7 +6,7 @@ from peft import PeftModel
 from box import Box
 
 from safelora import SafeLoRA
-
+import os
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -33,6 +33,10 @@ def main(config_path, save_folder):
     # read config
     config = Box.from_yaml(filename=config_path)
     print("Config:", config)
+
+    os.makedirs(save_folder, exist_ok=True)
+
+    config.to_yaml(os.path.join(save_folder, 'training_config.yaml'))
 
     peft_path = config.peft_model_path
     base_model_path = config.base_model_path

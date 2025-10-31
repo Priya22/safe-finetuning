@@ -67,7 +67,8 @@ def process_checkpoints(save_folder):
             process_checkpoint(cf.path, weight_list)
 
             # other step in eval
-            update_qv(cf.path, weight_list)
+            # don't need this
+            # update_qv(cf.path, weight_list)
 
             print("Done.")
 
@@ -81,7 +82,7 @@ def main(config_path, save_folder):
 
     # save config to save folder
 
-    config.to_yaml(os.path.join(save_folder, 'config.yaml'))
+    config.to_yaml(os.path.join(save_folder, 'training_config.yaml'))
 
     # args.name = 'out/'+str(args.rs)+'_'+str(args.ds)+str(args.more_module)+'llama3.1_alpaca_output/llama3.1_' + args.name +'_rank'+str(args.rank_s)
     # try:
@@ -91,11 +92,12 @@ def main(config_path, save_folder):
     #     print("Already Exists")
     aligned_model_path = config.base_model_path
 
-    device = config.device
+    # device = config.device
 
     tokenizer = AutoTokenizer.from_pretrained(aligned_model_path)
     # tokenizer.pad_token_id = tokenizer.eos_token_id
     model = AutoModelForCausalLM.from_pretrained(aligned_model_path, device_map="auto", dtype=dtype_map[config.dtype]) #, attn_implementation=config.attn_implementation)
+    device = model.device
 
     target_module_list = config.target_modules
 

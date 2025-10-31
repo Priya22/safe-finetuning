@@ -89,12 +89,12 @@ def get_wikitext2(nsamples, seed, seqlen, tokenizer):
 
 def get_alpaca(nsamples, seed, seqlen, tokenizer, disentangle=False, dataset="alpaca_train"):
     data_files = {"no_safety_train": "lowrank_prune/data/alpaca_cleaned_no_safety_train.csv", 
-                  "alpaca_train": "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_datasets/alpaca_clean_sample_5k"}
+                  "alpaca_train": "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_datasets/alpaca_clean_sample_5k/train"}
 
     # traindata = load_dataset("csv", data_files=data_files, split="train")
     traindata = load_from_disk(data_files[dataset])
-    if isinstance(traindata, dict) or "train" in traindata:
-        traindata = traindata["train"]
+    # if isinstance(traindata, dict) or "train" in traindata:
+    #     traindata = traindata["train"]
     random.seed(seed)
     
     # Encode datasets
