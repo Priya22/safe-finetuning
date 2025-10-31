@@ -33,7 +33,7 @@ def get_align(nsamples, seed, seqlen, tokenizer, disentangle=False, mode="base")
     #     data_files = {"train": "/home/c01mili/CISPA-projects/llm_ftsec-2024/PiSSA/mistral_harm.csv"}
     # else:
     #     data_files = {"train": "lowrank_prune/data/SFT_aligned_llama2-7b-chat-hf_train.csv"}
-    data_file = "lowrank_prune/data/align_train.csv"
+    data_file = "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/SaLoRA/lowrank_prune/data/align_train.csv"
     traindata = load_dataset("csv", data_files=data_file, split="train")
     trainloader = []
     random.seed(seed)

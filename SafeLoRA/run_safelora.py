@@ -35,11 +35,13 @@ def main(config_path, save_folder):
     print("Config:", config)
 
     peft_path = config.peft_model_path
-    # base_model_path = config.base_model_path
+    base_model_path = config.base_model_path
     # aligned_model_path = config.aligned_model_path
 
-    pmodel = AutoModelForCausalLM.from_pretrained(peft_path,dtype=dtype_map[config.dtype])
-
+    #pmodel = AutoModelForCausalLM.from_pretrained(peft_path,dtype=dtype_map[config.dtype])
+    base_model = AutoModelForCausalLM.from_pretrained(base_model_path, dtype=dtype_map[config.dtype])
+    pmodel = PeftModel.from_pretrained(base_model, peft_path)
+    
     safelora = SafeLoRA(pmodel, config)
 
     proj_model = safelora.model
