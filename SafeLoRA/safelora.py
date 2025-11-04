@@ -69,7 +69,7 @@ class SafeLoRA:
                 print("Layer {}".format(a_name, b_name))
                 assert b_param.shape == a_param.shape, "The dimensions of the base model's weight should be the same with the aligned model's weight."
                 vec = a_param - b_param
-                vec = vec.to(self.config.devices)
+                vec = vec.to(self.config.device)
                 vec = torch.mm(vec, vec.t()) / torch.norm(vec)
                 v.append((vec).detach().cpu())
         return v

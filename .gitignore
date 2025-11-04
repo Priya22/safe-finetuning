@@ -4,3 +4,4 @@ SafeLoRA/outputs/
 */.ipynb_checkpoints
 *.arrow
 */__pycache__
+*.pyc/
