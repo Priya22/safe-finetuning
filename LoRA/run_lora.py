@@ -24,8 +24,6 @@ os.environ["WANDB_DISABLED"] = "true"
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config_path', help='path to config file', required=True)
-# parser.add_argument('--log_file', required=True, help='Path to file to write logs')
-# parser.add_argument('--random_state', default=5, help="random state", required=False)
 parser.add_argument('--save_folder', help='path to save outputs and log files')
 
 
@@ -123,15 +121,17 @@ class LoraFT:
                 gradient_checkpointing=config.use_gradient_checkpointing,
                 num_train_epochs=config.num_train_epochs,
                 per_device_train_batch_size=config.per_device_train_batch_size,
+                per_device_eval_batch_size=config.per_device_train_eval_size,
                 gradient_accumulation_steps=config.gradient_accumulation_steps,
                 warmup_ratio=config.warmup_ratio,
                 lr_scheduler_type=config.lr_scheduler_type,
                 max_grad_norm=config.max_grad_norm,
+                weight_decay = config.weight_decay,
                 max_length=config.max_seq_length,
                 packing=config.use_packing,
                 output_dir=self.save_folder,
                 save_strategy=config.save_strategy,
-                save_only_model=False,
+                save_only_model=config.save_only_model,
                 eval_strategy=config.eval_strategy,
                 eval_steps=config.eval_steps if config.eval_strategy=='steps' else None,
                 logging_dir=self.save_folder,
@@ -140,7 +140,6 @@ class LoraFT:
                 logging_steps=config.logging_steps,
                 log_level='info',
                 seed=config.random_state,
-                completion_only_loss=config.completion_only_loss,
                 eos_token=tokenizer.eos_token
             )
         
@@ -166,7 +165,7 @@ class LoraFT:
         #     trainer.accelerator.state.fsdp_plugin.set_state_dict_type("FULL_STATE_DICT")
         # trainer.model.config.use_cache = True
         # save final adapter
-        trainer.save_model(output_dir = self.save_folder)
+        # trainer.save_model(output_dir = self.save_folder)
 
         # training_args.distributed_state.wait_for_everyone()
         tokenizer.save_pretrained(training_args.output_dir)
@@ -178,15 +177,23 @@ class LoraFT:
 
 def main(config_path, save_folder):
     config = Box.from_yaml(filename=config_path)
+
+    
     
     logging.info("Read config from {}".format(config_path))
     logging.info("Config: {}".format(config))
+
+    exp_id = config.exp_id
+    save_folder = os.path.join(save_folder, exp_id)
+    os.makedirs(save_folder, exist_ok=True)
+
+
     # logging.info("random state: {}".format(random_state))
     config.to_yaml(filename=os.path.join(save_folder, "training_config.yaml"))
     logging.info("Init Model and Dataset..")
 
     tuner = LoraFT(config=config, save_folder=save_folder)
-    # dataset = tuner.load_data()
+
     logging.info("Starting training at {}".format(time.time()))
 
     tuner.run_peft_training()

@@ -76,9 +76,9 @@ def process_checkpoints(save_folder):
 
 def main(config_path, save_folder):
     config = Box.from_yaml(filename=config_path)
+    exp_id = config.exp_id
 
-    # os.environ['MASTER_PORT'] = str(args.port)
-
+    save_folder = os.path.join(save_folder, exp_id)
     os.makedirs(save_folder, exist_ok=True)
 
     # save config to save folder
@@ -87,15 +87,8 @@ def main(config_path, save_folder):
 
     print(config)
 
-    # args.name = 'out/'+str(args.rs)+'_'+str(args.ds)+str(args.more_module)+'llama3.1_alpaca_output/llama3.1_' + args.name +'_rank'+str(args.rank_s)
-    # try:
-    #     os.mkdir('out/'+str(args.rs)+'_'+str(args.ds)+str(args.more_module)+'llama3.1_alpaca_output/')
-    #     print("Make dir "+'out/'+str(args.rs)+'_'+str(args.ds)+str(args.more_module)+'llama3.1_alpaca_output/')
-    # except:
-    #     print("Already Exists")
     aligned_model_path = config.base_model_path
-
-    # device = config.device
+    
 
     tokenizer = AutoTokenizer.from_pretrained(aligned_model_path)
     # tokenizer.pad_token_id = tokenizer.eos_token_id
@@ -106,12 +99,9 @@ def main(config_path, save_folder):
 
     divide_num = len(target_module_list)
 
-    adapter_name ='default'
-
-    rank = config.rank
+    rank = config.lora_rank
     n_iter=30
 
-    
     t1 = time.time()
     model = make_Act(model, verbose=False)
     model.requires_grad_(False)
@@ -125,15 +115,15 @@ def main(config_path, save_folder):
 
     dataloader = get_loaders(
         "alpaca_train",
-        nsamples=128,
+        nsamples=500,
         seed=0,
         seqlen=4096,
         tokenizer=tokenizer,
         disentangle=True,
     )
     dataloader_safe = get_loaders(
-        'align_short',
-        nsamples=128,
+        'align_train',
+        nsamples=None,
         seed=0,
         seqlen=4096,
         tokenizer=tokenizer,
@@ -291,8 +281,8 @@ def main(config_path, save_folder):
 
     peft_config = LoraConfig(
         r = rank,
-        lora_alpha = rank, # lora_alpha should match r to maintain scaling = 1
-        lora_dropout = 0,
+        lora_alpha = config.lora_alpha, # lora_alpha should match r to maintain scaling = 1
+        lora_dropout = config.lora_dropout,
         inference_mode=False,
         init_lora_weights=False, # PiSSA initialization
         target_modules = target_module_list,
@@ -370,19 +360,21 @@ def main(config_path, save_folder):
 
     training_args = SFTConfig(
         # args.name+"_"+str(rank)+"_"+str(args.lr)+'_'+str(args.wd)+"/",
-        learning_rate=config.lr,
+        learning_rate=config.learning_rate,
         lr_scheduler_type=config.lr_scheduler_type,
         use_liger_kernel=config.use_liger_kernel,
         warmup_ratio=config.warmup_ratio,
-        weight_decay=config.wd,
+        weight_decay=config.weight_decay,
+        max_grad_norm=config.max_grad_norm,
         optim=config.optim,
         gradient_checkpointing=config.use_gradient_checkpointing,
-        per_device_train_batch_size=config.bs,
+        per_device_train_batch_size=config.per_device_train_batch_size,
+        per_device_eval_batch_size=config.per_device_eval_batch_size,
         gradient_accumulation_steps=config.gradient_accumulation_steps,
         max_length=config.max_seq_length,
         packing=config.use_packing,
-        num_train_epochs=config.num_epochs,
-        save_only_model = False,
+        num_train_epochs=config.num_train_epochs,
+        save_only_model = config.save_only_model,
         eval_strategy = config.eval_strategy,
         save_strategy = config.save_strategy,
         logging_first_step=True,
@@ -404,47 +396,11 @@ def main(config_path, save_folder):
         processing_class=tokenizer
     )
 
-    # run with SFT
-    # training_args = SFTConfig(
-    #     # args.name+"_"+str(rank)+"_"+str(args.lr)+'_'+str(args.wd)+"/",
-    #     learning_rate=config.lr,
-    #     lr_scheduler_type=config.lr_scheduler_type,
-    #     warmup_ratio=config.warmup_ratio,
-    #     weight_decay=config.wd,
-    #     optim=config.optim,
-    #     gradient_checkpointing=config.use_gradient_checkpointing,
-    #     per_device_train_batch_size=config.bs,
-    #     gradient_accumulation_steps=config.gradient_accumulation_steps,
-    #     max_length=config.max_seq_length,
-    #     packing=config.use_packing,
-    #     num_train_epochs=config.num_epochs,
-    #     save_only_model = False,
-    #     eval_strategy = config.eval_strategy,
-    #     save_strategy = config.save_strategy,
-    #     logging_first_step=True,
-    #     logging_strategy=config.logging_strategy,
-    #     logging_steps=config.logging_steps,
-    #     logging_dir=save_folder,
-    #     log_level="info",
-    #     seed=config.random_state,
-    #     report_to = "none",
-    #     output_dir=save_folder,
-    #     eos_token=tokenizer.eos_token
-    # )
-
-    # trainer = SFTTrainer(
-    # model=model, # peft model
-    # args=training_args,
-    # train_dataset=train_ds,
-    # eval_dataset=val_ds,
-    # processing_class=tokenizer
-    # )
-
     trainer.train()
 
     #save final model
     tokenizer.save_pretrained(save_folder)
-    trainer.save_model(output_dir = save_folder)
+    # trainer.save_model(output_dir = save_folder)
 
     ## further processing of weights
 

@@ -2,7 +2,6 @@
 random_state: 5
 device: "cuda"
 #base model
-base_model_id: "meta-llama-3.1-8B-instruct"
 base_model_path: "meta-llama/Meta-Llama-3.1-8B-Instruct"
 dtype: "float16"
 max_seq_length: 8192 #context
@@ -26,7 +25,6 @@ use_gradient_checkpointing: true
 #finetuning data
 data_path: "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_datasets/alpaca_clean_sample_5k"
 data_template: "alpaca" #alpaca or dolly
-completion_only_loss: false # for huggingface
 #SFT Trainer
 per_device_train_batch_size: 16
 per_device_eval_batch_size: 16
@@ -38,11 +36,8 @@ num_train_epochs: 5
 learning_rate: 0.0002
 save_strategy: "epoch"
 eval_strategy: "epoch"
-eval_steps: 50 #only if eval_strategy is steps
 save_only_model: False
 optim: "adamw_torch_fused"
 weight_decay: 0.01
 logging_strategy: "steps"
 logging_steps: 10
-# instruction_part: "<|start_header_id|>user<|end_header_id|>\n\n"
-# response_part: "<|start_header_id|>assistant<|end_header_id|>\n\n"

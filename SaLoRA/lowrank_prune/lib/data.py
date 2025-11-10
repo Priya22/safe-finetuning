@@ -37,8 +37,8 @@ def get_align(nsamples, seed, seqlen, tokenizer, disentangle=False, mode="base")
     traindata = load_dataset("csv", data_files=data_file, split="train")
     trainloader = []
     random.seed(seed)
-    # if disentangle:
-    traindata_sampled = traindata.shuffle(seed=seed).select(range(nsamples))
+    if nsamples:
+        traindata_sampled = traindata.shuffle(seed=seed).select(range(nsamples))
     for i in range(nsamples):
         user_prompt = traindata_sampled["input"][i]
         assistant_response = traindata_sampled["output"][i]
@@ -49,6 +49,12 @@ def get_align(nsamples, seed, seqlen, tokenizer, disentangle=False, mode="base")
            return_tensors="pt",
            add_generation_prompt=True
         )
+
+        prompt_len = prompt_enc.shape[1]
+
+        if prompt_len >= seqlen:
+            continue
+
         response_enc = tokenizer(
             assistant_response,
             add_special_tokens=False,
@@ -57,7 +63,8 @@ def get_align(nsamples, seed, seqlen, tokenizer, disentangle=False, mode="base")
         
         inp = torch.cat((prompt_enc, response_enc["input_ids"]), dim=1)
         
-        prompt_len = prompt_enc.shape[1]
+        # truncate
+        inp = inp[:, :seqlen]
         
         tar = inp.clone()
         tar[:, :prompt_len] = -100
@@ -89,7 +96,7 @@ def get_wikitext2(nsamples, seed, seqlen, tokenizer):
 
 def get_alpaca(nsamples, seed, seqlen, tokenizer, disentangle=False, dataset="alpaca_train"):
     data_files = {"no_safety_train": "lowrank_prune/data/alpaca_cleaned_no_safety_train.csv", 
-                  "alpaca_train": "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_datasets/alpaca_clean_sample_5k/train"}
+                  "alpaca_train": "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/SaLoRA/lowrank_prune/data/alpaca_align.csv"}
 
     # traindata = load_dataset("csv", data_files=data_files, split="train")
     traindata = load_from_disk(data_files[dataset])
@@ -108,13 +115,19 @@ def get_alpaca(nsamples, seed, seqlen, tokenizer, disentangle=False, dataset="al
 
         prompt_enc = tokenizer.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True, tokenize=True, return_tensors="pt")
 
+        prompt_len = prompt_enc.shape[1]
+
+        if prompt_len >= seqlen:
+            continue
+
         response_enc = tokenizer(response, add_special_tokens=False, return_tensors="pt")
 
         inp = torch.cat(
             (prompt_enc, response_enc.input_ids), dim=1
         )
-
-        prompt_len = prompt_enc.shape[1]
+        ## truncate
+        inp = inp[:, :seqlen]
+        
 
         tar = inp.clone()
         tar[:, :prompt_len] = -100
