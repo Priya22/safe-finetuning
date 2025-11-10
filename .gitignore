@@ -7,3 +7,4 @@ SafeLoRA/outputs/
 *.pyc/
 SafeLoRA/eval_outputs/
 *.ipynb
+ft_datasets/
