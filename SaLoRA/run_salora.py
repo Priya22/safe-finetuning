@@ -459,4 +459,3 @@ if __name__ == '__main__':
     #post-processing
     print("Running post-processing steps for checkpoints")
     process_checkpoints(save_folder)
-
