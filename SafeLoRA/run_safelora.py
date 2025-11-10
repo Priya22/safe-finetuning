@@ -29,7 +29,7 @@ dtype_map = {"float16": torch.float16,
                 "float32": torch.float32
 }
 
-def main(config_path, save_folder):
+def main(config_path, peft_model_path, save_folder):
     # read config
     config = Box.from_yaml(filename=config_path)
     print("Config:", config)
@@ -38,7 +38,7 @@ def main(config_path, save_folder):
 
     config.to_yaml(os.path.join(save_folder, 'training_config.yaml'))
 
-    peft_path = config.peft_model_path
+    peft_path = peft_model_path
     base_model_path = config.base_model_path
     # aligned_model_path = config.aligned_model_path
 

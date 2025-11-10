@@ -5,3 +5,5 @@ SafeLoRA/outputs/
 *.arrow
 */__pycache__
 *.pyc/
+SafeLoRA/eval_outputs/
+*.ipynb
