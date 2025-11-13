@@ -121,7 +121,7 @@ class LoraFT:
                 gradient_checkpointing=config.use_gradient_checkpointing,
                 num_train_epochs=config.num_train_epochs,
                 per_device_train_batch_size=config.per_device_train_batch_size,
-                per_device_eval_batch_size=config.per_device_train_eval_size,
+                per_device_eval_batch_size=config.per_device_eval_batch_size,
                 gradient_accumulation_steps=config.gradient_accumulation_steps,
                 warmup_ratio=config.warmup_ratio,
                 lr_scheduler_type=config.lr_scheduler_type,

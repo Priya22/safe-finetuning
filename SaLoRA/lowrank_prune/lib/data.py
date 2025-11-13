@@ -38,10 +38,10 @@ def get_align(nsamples, seed, seqlen, tokenizer, disentangle=False, mode="base")
     trainloader = []
     random.seed(seed)
     if nsamples:
-        traindata_sampled = traindata.shuffle(seed=seed).select(range(nsamples))
-    for i in range(nsamples):
-        user_prompt = traindata_sampled["input"][i]
-        assistant_response = traindata_sampled["output"][i]
+        traindata = traindata.shuffle(seed=seed).select(range(nsamples))
+    for i in range(len(traindata)):
+        user_prompt = traindata["input"][i]
+        assistant_response = traindata["output"][i]
         formatted_inp = [{"role": "user", "content": user_prompt}]
         prompt_enc = tokenizer.apply_chat_template(
         formatted_inp,
@@ -69,19 +69,6 @@ def get_align(nsamples, seed, seqlen, tokenizer, disentangle=False, mode="base")
         tar = inp.clone()
         tar[:, :prompt_len] = -100
         trainloader.append((inp, tar))
-        
-    # else:
-    #     # Encode datasets
-    #     trainenc = tokenizer(" ".join(traindata["text"]), return_tensors="pt")
-
-    #     # Generate samples from training set
-    #     for _ in range(nsamples):
-    #         i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
-    #         j = i + seqlen
-    #         inp = trainenc.input_ids[:, i:j]
-    #         tar = inp.clone()
-    #         tar[:, :-1] = -100
-    #         trainloader.append((inp, tar))
     return trainloader
 
 
@@ -98,8 +85,8 @@ def get_alpaca(nsamples, seed, seqlen, tokenizer, disentangle=False, dataset="al
     data_files = {"no_safety_train": "lowrank_prune/data/alpaca_cleaned_no_safety_train.csv", 
                   "alpaca_train": "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/SaLoRA/lowrank_prune/data/alpaca_align.csv"}
 
-    # traindata = load_dataset("csv", data_files=data_files, split="train")
-    traindata = load_from_disk(data_files[dataset])
+    traindata = load_dataset("csv", data_files=data_files[dataset], split="train")
+    # traindata = load_from_disk(data_files[dataset])
     # if isinstance(traindata, dict) or "train" in traindata:
     #     traindata = traindata["train"]
     random.seed(seed)
@@ -110,7 +97,7 @@ def get_alpaca(nsamples, seed, seqlen, tokenizer, disentangle=False, dataset="al
     traindata_sampled = traindata.shuffle(seed=seed).select(range(nsamples))
     for i in range(nsamples):
 
-        prompt = traindata_sampled["instruction"][i] + ": " + traindata_sampled["input"][i]
+        prompt = traindata_sampled["input"][i]
         response = traindata_sampled["output"][i]
 
         prompt_enc = tokenizer.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True, tokenize=True, return_tensors="pt")
@@ -224,7 +211,7 @@ def get_loaders(
         return get_wikitext2(nsamples, seed, seqlen, tokenizer)
     if name in ["alpaca", "alpaca_cleaned", "alpaca_cleaned_no_safety", "alpaca_train"]:
         return get_alpaca(nsamples, seed, seqlen, tokenizer, disentangle, dataset=name)
-    if name == "align":
+    if name == "align_train":
         return get_align(nsamples, seed, seqlen, tokenizer, disentangle=disentangle)
     if name == "align_short":
         return get_align(
