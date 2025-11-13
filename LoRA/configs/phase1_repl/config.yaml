@@ -34,7 +34,7 @@ max_grad_norm: 1.0
 warmup_ratio: 0.05
 lr_scheduler_type: "linear"
 num_train_epochs: 5
-learning_rate: 2e-5
+learning_rate: 0.00002
 save_strategy: "epoch"
 eval_strategy: "epoch"
 save_only_model: False

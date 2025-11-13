@@ -3,8 +3,8 @@ LoRA/outputs/
 SafeLoRA/outputs/
 */.ipynb_checkpoints
 *.arrow
-*/__pycache__
-*.pyc/
+*/__pycache__/
+*.pyc
 SafeLoRA/eval_outputs/
 *.ipynb
 ft_datasets/
