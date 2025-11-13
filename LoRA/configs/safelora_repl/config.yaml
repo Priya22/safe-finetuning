@@ -2,8 +2,8 @@
 random_state: 5
 device: "cuda"
 #base model
-base_model_path: "meta-llama/Meta-Llama-3.1-8B-Instruct"
-dtype: "float16"
+base_model_path: "meta-llama/Llama-2-7b-chat-hf"
+dtype: "bfloat16"
 max_seq_length: 8192 #context
 attn_implementation: "flash_attention_3" #flash_attention_3, flash_attention_2, eager
 use_liger_kernel: false
@@ -11,29 +11,23 @@ use_packing: false
 #peft model
 target_modules:
    - "q_proj"
-#   - "k_proj"
    - "v_proj"
-#   - "o_proj"
-#   - "gate_proj"
-#   - "up_proj"
-#   - "down_proj"
-#target_modules: "all-linear"
-lora_alpha: 16
-lora_dropout: 0.05
-lora_rank: 16
+lora_alpha: 8
+lora_dropout: 0.00
+lora_rank: 8
 use_gradient_checkpointing: true
 #finetuning data
-data_path: "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_datasets/alpaca_clean_sample_5k"
+data_path: "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_datasets/alpaca_clean_full"
 data_template: "alpaca" #alpaca or dolly
 #SFT Trainer
-per_device_train_batch_size: 16
-per_device_eval_batch_size: 16
+per_device_train_batch_size: 8
+per_device_eval_batch_size: 8
 gradient_accumulation_steps: 1
 max_grad_norm: 1.0
 warmup_ratio: 0.05
 lr_scheduler_type: "linear"
 num_train_epochs: 5
-learning_rate: 0.0002
+learning_rate: 0.00005
 save_strategy: "epoch"
 eval_strategy: "epoch"
 save_only_model: False

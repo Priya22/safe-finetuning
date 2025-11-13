@@ -1,9 +1,10 @@
 ---
+exp_id: "llama8b_alpaca5k"
 random_state: 5
 device: "cuda"
 #base model
 base_model_path: "meta-llama/Meta-Llama-3.1-8B-Instruct"
-dtype: "float16"
+dtype: "bfloat16"
 max_seq_length: 8192 #context
 attn_implementation: "flash_attention_3" #flash_attention_3, flash_attention_2, eager
 use_liger_kernel: false

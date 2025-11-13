@@ -1,0 +1,10 @@
+---
+exp_id: "safelora_repl"
+base_model_path: "meta-llama/Llama-2-7b-hf"
+aligned_model_path: "meta-llama/Llama-2-7b-chat-hf"
+peft_model_path: <set-here?
+device: "cuda"
+select_layers_type: "threshold"
+threshold: 0.5
+num_proj_layers: 5
+dtype: "bfloat16"
