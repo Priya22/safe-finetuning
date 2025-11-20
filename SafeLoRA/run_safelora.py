@@ -43,7 +43,7 @@ def main(config_path, peft_model_path, save_folder):
     # aligned_model_path = config.aligned_model_path
 
     #pmodel = AutoModelForCausalLM.from_pretrained(peft_path,dtype=dtype_map[config.dtype])
-    base_model = AutoModelForCausalLM.from_pretrained(base_model_path, dtype=dtype_map[config.dtype])
+    base_model = AutoModelForCausalLM.from_pretrained(base_model_path, torch_dtype=dtype_map[config.dtype])
     pmodel = PeftModel.from_pretrained(base_model, peft_path)
     
     safelora = SafeLoRA(pmodel, config)
