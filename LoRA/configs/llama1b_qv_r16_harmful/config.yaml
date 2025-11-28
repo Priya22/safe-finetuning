@@ -1,7 +1,5 @@
 ---
-exp_id: "llama1b_harmful"
-model_id: "llama1b"
-dataset_id: "harmful"
+exp_id: "llama1b_qv_r16_harmful"
 random_state: 5
 device: "cuda"
 #base model

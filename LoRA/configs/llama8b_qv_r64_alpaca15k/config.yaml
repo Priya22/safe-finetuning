@@ -1,7 +1,5 @@
 ---
-exp_id: "llama8b_alpaca15k"
-model_id: "llama8b"
-dataset_id: "alpaca15k"
+exp_id: "llama8b_qv_r64_alpaca15k"
 random_state: 5
 device: "cuda"
 #base model
