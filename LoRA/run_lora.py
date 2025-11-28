@@ -182,9 +182,6 @@ def main(config_path, save_folder):
     
     logging.info("Read config from {}".format(config_path))
     logging.info("Config: {}".format(config))
-
-    exp_id = config.exp_id
-    save_folder = os.path.join(save_folder, exp_id)
     os.makedirs(save_folder, exist_ok=True)
 
 
