@@ -64,12 +64,12 @@ def process_checkpoint(checkpoint_folder, weight_list, num_layers=32):
 
     save_file(a, os.path.join(checkpoint_folder, 'adapter_model.safetensors'))
 
-def main(config_path, save_folder):
+def main(config_path):
 
     config = Box.from_yaml(filename=config_path)
     exp_id = config.exp_id
 
-    save_folder = os.path.join(save_folder, exp_id)
+    save_folder = config.exp_id
     os.makedirs(save_folder, exist_ok=True)
 
     print("saving all artifacts to {}".format(save_folder))

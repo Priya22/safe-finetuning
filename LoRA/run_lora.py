@@ -47,7 +47,6 @@ dtype_map = {"float16": torch.float16,
 class LoraFT:
     def __init__(self, config, save_folder):
         self.config = config
-        self.save_folder = save_folder
 
         self.model, self.tokenizer = self.load_model_for_training()
 
@@ -175,10 +174,10 @@ class LoraFT:
         logging.info("Finished training | final model saved.")
 
 
-def main(config_path, save_folder):
+def main(config_path):
     config = Box.from_yaml(filename=config_path)
 
-    
+    save_folder = config.exp_id
     
     logging.info("Read config from {}".format(config_path))
     logging.info("Config: {}".format(config))
@@ -200,11 +199,9 @@ def main(config_path, save_folder):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    save_folder = args.save_folder
-    os.makedirs(save_folder, exist_ok=True)
 
     # log_file = os.path.join(save_folder, 'log.txt') # goes to slurm log
     logging.basicConfig(encoding='utf-8', level=logging.DEBUG, \
                         format='%(asctime)s %(message)s')
     
-    main(args.config_path, save_folder)
+    main(args.config_path)
