@@ -1,5 +1,5 @@
 ---
-exp_id: "llama8b_gsm8k_qv_r64_gsm8k"
+exp_id: "llama8b_qv_r64_gsm8k"
 random_state: 5
 device: "cuda"
 #base model

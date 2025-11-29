@@ -69,7 +69,7 @@ def main(config_path, save_folder):
     config = Box.from_yaml(filename=config_path)
     exp_id = config.exp_id
 
-    save_folder = os.path.join(save_folder, exp_id)
+    save_folder = os.path.join("..", "outputs", config.exp_id)
     os.makedirs(save_folder, exist_ok=True)
 
     print("saving all artifacts to {}".format(save_folder))
