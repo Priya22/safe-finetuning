@@ -1,0 +1,44 @@
+---
+exp_id: "llama8b_all_r64_alpaca15k"
+random_state: 5
+dtype: "bfloat16"
+device: "cuda"
+attn_implementation: "flash_attention_3" #flash_attention_3, flash_attention_2, eager
+use_liger_kernel: false
+use_packing: false
+base_model_path: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+max_seq_length: 8192
+target_modules:
+  - "q_proj"
+  - "k_proj"
+  - "v_proj"
+  - "o_proj"
+  - "gate_proj"
+  - "up_proj"
+  - "down_proj"
+lora_rank: 64
+lora_alpha: 64
+lora_dropout: 0.0
+rs: 32 #safety rank for SVD of safe activations
+ds: 32 #task rank for SVD of task activations
+use_gradient_checkpointing: true
+data_path: "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_datasets/alpaca_clean_sample_15k"
+data_template: "alpaca"
+per_device_train_batch_size: 8
+per_device_eval_batch_size: 8
+gradient_accumulation_steps: 2
+max_grad_norm: 1.0
+learning_rate: 0.0002
+weight_decay: 0.01
+optim: "adamw_torch_fused"
+lr_scheduler_type: "linear"
+warmup_ratio: 0.05
+num_train_epochs: 5
+eval_strategy: "epoch"
+save_strategy: "epoch"
+logging_strategy: "steps"
+logging_steps: 10
+save_only_model: False
+
+
+
