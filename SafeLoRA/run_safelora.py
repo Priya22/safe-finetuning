@@ -33,6 +33,7 @@ def main(config_path, peft_model_path, save_folder):
     # read config
     config = Box.from_yaml(filename=config_path)
     print("Config:", config)
+    save_folder = os.path.join(save_folder, exp_id)
 
     os.makedirs(save_folder, exist_ok=True)
 
