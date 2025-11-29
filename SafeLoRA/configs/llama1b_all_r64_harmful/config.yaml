@@ -1,0 +1,9 @@
+exp_id: "llama1b_all_r64_harmful"
+base_model_path: "meta-llama/Llama-3.2-1B"
+aligned_model_path: "meta-llama/Llama-3.2-1B-Instruct"
+peft_model_path: "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/LoRA/outputs/llama1b_all_r64_harmful"
+device: "cuda"
+select_layers_type: "threshold"
+threshold: 0.5
+num_proj_layers: 5
+dtype: "float16"
