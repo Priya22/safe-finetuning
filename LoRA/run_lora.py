@@ -47,6 +47,7 @@ dtype_map = {"float16": torch.float16,
 class LoraFT:
     def __init__(self, config, save_folder):
         self.config = config
+        self.save_folder = save_folder
 
         self.model, self.tokenizer = self.load_model_for_training()
 
