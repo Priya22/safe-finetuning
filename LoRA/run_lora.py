@@ -177,7 +177,7 @@ class LoraFT:
 def main(config_path, save_folder):
     config = Box.from_yaml(filename=config_path)
 
-    save_folder = os.path.join(save_folder, exp_id)
+    save_folder = os.path.join(save_folder, config.exp_id)
     
     logging.info("Read config from {}".format(config_path))
     logging.info("Config: {}".format(config))
