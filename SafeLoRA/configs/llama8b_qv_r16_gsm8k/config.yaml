@@ -7,4 +7,4 @@ device: "cuda"
 select_layers_type: "threshold"
 threshold: 0.5
 num_proj_layers: 5
-dtype: "float16"
+dtype: "bfloat16"
