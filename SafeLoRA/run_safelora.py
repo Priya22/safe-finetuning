@@ -33,7 +33,6 @@ def main(config_path, save_folder):
     # read config
     config = Box.from_yaml(filename=config_path)
     #print("Config:", config)
-    save_folder = os.path.join(save_folder, config.exp_id)
     os.makedirs(save_folder, exist_ok=True)
     config.to_yaml(os.path.join(save_folder, 'training_config.yaml'))
 

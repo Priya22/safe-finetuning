@@ -2,7 +2,7 @@
 exp_id: "llama1b_all_r16_gsm8k"
 base_model_path: "meta-llama/Llama-3.2-1B"
 aligned_model_path: "meta-llama/Llama-3.2-1B-Instruct"
-peft_model_path: "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_ckpts/llama1b_all_r16_gsm8k/LoRA"
+peft_model_path: "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_ckpts/llama1b_all_r16_gsm8k/lora"
 device: "cuda"
 select_layers_type: "threshold"
 threshold: 0.5
