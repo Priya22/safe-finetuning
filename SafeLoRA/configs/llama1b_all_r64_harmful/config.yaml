@@ -1,7 +1,7 @@
 exp_id: "llama1b_all_r64_harmful"
 base_model_path: "meta-llama/Llama-3.2-1B"
 aligned_model_path: "meta-llama/Llama-3.2-1B-Instruct"
-peft_model_path: "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/LoRA/outputs/llama1b_all_r64_harmful"
+peft_model_path: "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_ckpts/llama1b_all_r64_harmful/LoRA"
 device: "cuda"
 select_layers_type: "threshold"
 threshold: 0.5
