@@ -34,8 +34,12 @@ def main(config_path, save_folder):
     config = Box.from_yaml(filename=config_path)
     #print("Config:", config)
     os.makedirs(save_folder, exist_ok=True)
-    config.to_yaml(os.path.join(save_folder, 'training_config.yaml'))
 
+    if os.path.exists(os.path.join(save_folder, 'tokenizer_config.json')):
+      print("Tokenizer found at save dir, skipping ft")
+      return
+    config.to_yaml(os.path.join(save_folder, 'training_config.yaml'))
+    
     peft_path = config.peft_model_path
     base_model_path = config.base_model_path
     # aligned_model_path = config.aligned_model_path
