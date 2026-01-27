@@ -1,0 +1,8 @@
+1. base_model_path
+2. aligned_model_path
+3. Params specified in configs/training.py
+4. gamma (line 219, for scheduler)
+5. save_every_epoch
+6. enable_fsdp: false
+use_peft: true
+7. run_validation

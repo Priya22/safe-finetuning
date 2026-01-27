@@ -35,17 +35,13 @@ def main(config_path, save_folder):
     #print("Config:", config)
     os.makedirs(save_folder, exist_ok=True)
 
-    if os.path.exists(os.path.join(save_folder, 'tokenizer_config.json')):
-      print("Tokenizer found at save dir, skipping ft")
-      return
     config.to_yaml(os.path.join(save_folder, 'training_config.yaml'))
     
     peft_path = config.peft_model_path
-    base_model_path = config.base_model_path
-    # aligned_model_path = config.aligned_model_path
+    aligned_model_path = config.aligned_model_path
 
-    #pmodel = AutoModelForCausalLM.from_pretrained(peft_path,dtype=dtype_map[config.dtype])
-    base_model = AutoModelForCausalLM.from_pretrained(base_model_path, torch_dtype=dtype_map[config.dtype])
+    # pmodel = AutoModelForCausalLM.from_pretrained(peft_path,dtype=dtype_map[config.dtype])
+    aligned_model = AutoModelForCausalLM.from_pretrained(aligned_model_path, dtype=dtype_map[config.dtype])
 
     #Iterate through each individual checkpoint
     checkpoints = [d for d in os.listdir(peft_path) if d.startswith("checkpoint")]
@@ -54,12 +50,16 @@ def main(config_path, save_folder):
     for ckpt in checkpoints:
         ckpt_path = os.path.join(peft_path, ckpt)
         print(f"Processing checkpoint: {ckpt_path}")
-        pmodel = PeftModel.from_pretrained(base_model, ckpt_path, torch_dtype=dtype_map[config.dtype])
+        save_ckpt = os.path.join(save_folder, ckpt)
+        if os.path.exists(os.path.join(save_ckpt, 'adapter_config.json')):
+          print("model found at save dir, skipping ft")
+          return
+        
+        pmodel = PeftModel.from_pretrained(aligned_model, ckpt_path, dtype=dtype_map[config.dtype])
         
         safelora = SafeLoRA(pmodel, config)
 
         proj_model = safelora.model
-        save_ckpt = os.path.join(save_folder, ckpt)
 
         # save projected model
         proj_model.save_pretrained(save_ckpt)
