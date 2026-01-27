@@ -2,7 +2,14 @@
 # This software may be used and distributed according to the terms of the Llama 2 Community License Agreement.
 
 import os
+# Prevent TensorFlow from grabbing the GPU
+os.environ["CUDA_VISIBLE_DEVICES"] = "0" 
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" 
+# Prevent oneDNN/Factory conflicts
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
+import yaml
+from box import Box
 import fire
 import torch
 import torch.distributed as dist
@@ -49,44 +56,71 @@ import copy
 import numpy
 import torch
 from transformers import AutoModelForCausalLM
+from tqdm import tqdm
 
+BASE_PATH = "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/AsFT/ckpts"
+
+def load_config(yaml_path): 
+    with open(yaml_path, 'r') as f:
+        data = yaml.load(f, Loader=yaml.SafeLoader)
+    return Box(data)
 
 class SafeLoRA:
     def __init__(self, peft_model: torch.nn.Module, config):
         super().__init__()
-        self.peft_model = peft_model
         self.config = config
         self.peft_config = peft_model.peft_config["default"]
-        self.model_ori = copy.deepcopy(peft_model)
+        self.peft_model = peft_model
+        #self.model_ori = copy.deepcopy(peft_model)
 
-
-        self.base_model = AutoModelForCausalLM.from_pretrained(
-            self.config.base_model_path,
-            return_dict=True,
-            load_in_8bit=False,
-            device_map="cpu",
-            low_cpu_mem_usage=True,
-        )
-        self.aligned_model = AutoModelForCausalLM.from_pretrained(
+        aligned = AutoModelForCausalLM.from_pretrained(
             self.config.aligned_model_path,
             return_dict=True,
             load_in_8bit=False,
             device_map="cpu",
             low_cpu_mem_usage=True,
+            local_files_only=True,
         )
-        self.project_matrix = self.get_aligned_matrix()
-
-    def get_aligned_matrix(self):
-        v = []
-        proj_modules = list(self.peft_config.target_modules)
-        for (b_name, b_param), (a_name, a_param) in zip(self.base_model.named_parameters(), self.aligned_model.named_parameters()):
-            if any(module in a_name for module in proj_modules):
-                vec = a_param - b_param
+        
+        aligned_weights = {n: p.data.clone() for n, p in aligned.named_parameters()
+                            if any(m in n for m in self.peft_config.target_modules)}
+        del aligned
+        import gc
+        gc.collect()        
+        
+        base = AutoModelForCausalLM.from_pretrained(
+            self.config.base_model_path,
+            return_dict=True,
+            load_in_8bit=False,
+            device_map="cpu",
+            low_cpu_mem_usage=True,
+            local_files_only=True,
+        )
+        
+        self.project_matrix = []
+        for name, b_param in base.named_parameters():
+            if name in aligned_weights:
+                vec = aligned_weights[name] - b_param.data
                 vec = vec.to(self.config.devices)
-                vec = torch.mm(vec, vec.t()) / torch.norm(vec)
-                v.append(vec.detach().cpu())
-        return v
-
+                if vec.dim() ==1: vec = vec.unsqueeze(0)
+                
+                res = torch.mm(vec, vec.t()) / (torch.norm(vec) + 1e-8)
+                
+                # Perform math on GPU if possible to speed up, then move back to CPU
+                vec_cuda = vec.to(self.config.devices)
+                res = torch.mm(vec_cuda, vec_cuda.t()) / (torch.norm(vec_cuda) + 1e-8)
+                self.project_matrix.append(res.cpu())
+                
+                del vec_cuda # Clear GPU temp var
+        
+        import gc
+        del base
+        del aligned_weights
+        gc.collect()
+        torch.cuda.empty_cache()
+    
+    def get_aligned_matrix(self):
+        return self.project_matrix
 
 class SafeLoRAConfig:
     def __init__(self, base_model_path, aligned_model_path, device):
@@ -94,14 +128,28 @@ class SafeLoRAConfig:
         self.aligned_model_path = aligned_model_path  
         self.devices = device  
 
-def main(**kwargs):
+def main(config_path=None, save_folder=None, **kwargs):
+    config = load_config(config_path) if config_path else Box({})
     
-    
+    # Any CLI arguments override their respective argument in the config
+    config.update(kwargs)
+
+    if torch.cuda.is_available():
+        torch.cuda.init()
+        print(f"--> Confirmed GPU: {torch.cuda.get_device_name(0)}")
+    else:
+        raise RuntimeError("GPU not found. Please check your Colab Runtime settings.")
+
     # Update the configuration for the training and sharding process
-    update_config((train_config, fsdp_config), **kwargs)
+    update_config((train_config, fsdp_config), **config)
     safe_config = SafeLoRAConfig(
-        base_model_path='ckpts/Llama-2-7b-hf',
-        aligned_model_path='ckpts/Llama-2-7b-chat-fp16',
+        # Use this if using models directly from HF
+        #base_model_path=config.base_model_path,
+        #aligned_model_path=config.aligned_model_path,
+        
+        # Use this if using locally downloaded models
+        base_model_path=os.path.join(BASE_PATH, config.base_model_path),
+        aligned_model_path=os.path.join(BASE_PATH, config.aligned_model_path),
         device='cuda' if torch.cuda.is_available() else 'cpu'
     )
     # Set the seeds for reproducibility
@@ -135,25 +183,36 @@ def main(**kwargs):
             raise Exception("latest pytorch nightly build is required to run with low_cpu_fsdp config, "
                             "please install latest nightly.")
         if rank == 0:
+            print("--> Loading Aligned Model...")
             model = LlamaForCausalLM.from_pretrained(
-                train_config.model_name,
+                safe_config.aligned_model_path,
+                local_files_only=True,
                 load_in_8bit=True if train_config.quantization else None,
                 device_map="auto" if train_config.quantization else None,
                 use_cache=use_cache,
             )
+            print("--> Aligned Model loaded")
+            model.gradient_checkpointing_enable()
+            model.config.use_cache = False
         else:
-            llama_config = LlamaConfig.from_pretrained(train_config.model_name)
+            llama_config = LlamaConfig.from_pretrained(safe_config.aligned_model_path)
             llama_config.use_cache = use_cache
             with torch.device("meta"):
                 model = LlamaForCausalLM(llama_config)
 
     else:
+        print("--> Loading Aligned Model...")
         model = LlamaForCausalLM.from_pretrained(
-            train_config.model_name,
+            safe_config.aligned_model_path,
+            local_files_only=True,
             load_in_8bit=True if train_config.quantization else None,
             device_map="auto" if train_config.quantization else None,
             use_cache=use_cache,
         )
+        print("--> Aligned Model loaded")
+        model.gradient_checkpointing_enable()
+        model.config.use_cache = False
+        
     if train_config.enable_fsdp and train_config.use_fast_kernels:
         """
         For FSDP and FSDP+PEFT, setting 'use_fast_kernels' will enable
@@ -176,22 +235,19 @@ def main(**kwargs):
         model.to(torch.bfloat16)
 
     # Load the tokenizer and add special tokens
-    tokenizer = LlamaTokenizer.from_pretrained(train_config.model_name)
-    tokenizer.add_special_tokens(
-            {
-
-                "pad_token": "<PAD>",
-            }
-        )
+    tokenizer = LlamaTokenizer.from_pretrained(safe_config.aligned_model_path, local_files_only=True)
+    tokenizer.pad_token = tokenizer.eos_token
     dataset_config = generate_dataset_config(train_config, kwargs)
 
      # Load and preprocess the dataset for training and validation
+    print("--> Loading training dataset...")
     dataset_train = get_preprocessed_dataset(
         tokenizer,
         dataset_config,
         split="train",
     )
-    
+    print(f"--> Training dataset loaded, {len(dataset_train)} samples")
+        
     if train_config.use_peft:
         peft_config = generate_peft_config(train_config, kwargs)
         model = get_peft_model(model, peft_config)
@@ -224,17 +280,21 @@ def main(**kwargs):
         if fsdp_config.fsdp_activation_checkpointing:
             policies.apply_fsdp_checkpointing(model)
     elif not train_config.quantization and not train_config.enable_fsdp:
-        model.to("cuda")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
+        print(f"Model moved to {device}")
 
     if not train_config.enable_fsdp or rank == 0:
         print(f"--> Training Set Length = {len(dataset_train)}")
 
     if train_config.run_validation:
+        print("--> Loading validation dataset...")
         dataset_val = get_preprocessed_dataset(
             tokenizer,
             dataset_config,
             split="test",
         )
+        print(f"--> Validation dataset loaded, {len(dataset_val)} samples")
     else:
         dataset_val = None
     
@@ -250,6 +310,7 @@ def main(**kwargs):
             num_replicas=dist.get_world_size(),
             shuffle=True,
         )
+        
         if train_config.run_validation:
             val_sampler = DistributedSampler(
                 dataset_val,

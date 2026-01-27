@@ -6,9 +6,9 @@ echo $CUDA_VISIBLE_DEVICES
 
 torchrun --nnodes 1 --nproc_per_node 1  --master_port 29501 AsFT_finetuning.py \
 --batch_size_training 8 --lr 5e-5 \
---num_epochs 10 \
+--num_epochs  \
 --dataset alpaca_dataset \
---mode 1k_p_0.1 \
+--mode 1k_p_0 \
 --model_name ckpts/Llama-2-7b-chat-fp16 \
 --pure_bf16 \
 --dist_checkpoint_root_folder finetuned_models \

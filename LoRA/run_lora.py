@@ -178,12 +178,15 @@ class LoraFT:
 def main(config_path, save_folder):
     config = Box.from_yaml(filename=config_path)
 
-    save_folder = os.path.join(save_folder, config.exp_id)
+    # save_folder = os.path.join(save_folder, config.exp_id)
     
     logging.info("Read config from {}".format(config_path))
-    logging.info("Config: {}".format(config))
+    logging.info("Config: {} | save folder: {}".format(config, save_folder))
     os.makedirs(save_folder, exist_ok=True)
 
+    if os.path.exists(os.path.join(save_folder, 'tokenizer_config.json')):
+      print("Tokenizer found at save dir, skipping ft")
+      return
 
     # logging.info("random state: {}".format(random_state))
     config.to_yaml(filename=os.path.join(save_folder, "training_config.yaml"))
@@ -205,4 +208,4 @@ if __name__ == '__main__':
     logging.basicConfig(encoding='utf-8', level=logging.DEBUG, \
                         format='%(asctime)s %(message)s')
     
-    main(args.config_path)
+    main(args.config_path, args.save_folder)

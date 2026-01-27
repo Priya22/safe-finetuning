@@ -69,10 +69,14 @@ def main(config_path, save_folder):
     config = Box.from_yaml(filename=config_path)
     exp_id = config.exp_id
 
-    save_folder = os.path.join(save_folder, exp_id)
+    # save_folder = os.path.join(save_folder, exp_id)
     os.makedirs(save_folder, exist_ok=True)
 
     print("saving all artifacts to {}".format(save_folder))
+
+    if os.path.exists(os.path.join(save_folder, 'tokenizer_config.json')):
+      print("Tokenizer found at save dir, skipping ft")
+      return
     # save config to save folder
 
     config.to_yaml(os.path.join(save_folder, 'training_config.yaml'))
@@ -397,9 +401,6 @@ def main(config_path, save_folder):
 
     trainer.train()
 
-    tokenizer.save_pretrained(save_folder)
-    print("Saved to {}".format(save_folder))
-
     print("Running post-processing on checkpoints: ")
 
     abc_path = os.path.join(save_folder, 'lora_ABC.pt')
@@ -411,7 +412,9 @@ def main(config_path, save_folder):
         if "checkpoint" in cf.name:
             print(cf.path)
             process_checkpoint(cf.path, weight_list, num_layers=num_hidden_layers)
-
+    
+    tokenizer.save_pretrained(save_folder)
+    print("Saved to {}".format(save_folder))
 
 if __name__ == '__main__':
     args = parser.parse_args()
