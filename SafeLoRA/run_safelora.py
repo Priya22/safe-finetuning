@@ -53,7 +53,7 @@ def main(config_path, save_folder):
         save_ckpt = os.path.join(save_folder, ckpt)
         if os.path.exists(os.path.join(save_ckpt, 'adapter_config.json')):
           print("model found at save dir, skipping ft")
-          return
+          continue
         
         pmodel = PeftModel.from_pretrained(aligned_model, ckpt_path, dtype=dtype_map[config.dtype])
         

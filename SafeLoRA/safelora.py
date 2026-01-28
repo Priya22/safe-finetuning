@@ -49,7 +49,6 @@ class SafeLoRA:
         base_model = AutoModelForCausalLM.from_pretrained(
             self.config.base_model_path,
             return_dict=True,
-            load_in_8bit=False,
             device_map="cpu",
             low_cpu_mem_usage=True,
         )
@@ -58,7 +57,6 @@ class SafeLoRA:
         aligned_model = AutoModelForCausalLM.from_pretrained(
             self.config.aligned_model_path,
             return_dict=True,
-            load_in_8bit=False,
             device_map="cpu",
             low_cpu_mem_usage=True,
         )
