@@ -1,0 +1,8 @@
+exp_id: "test_run"
+seed: 5
+model_name: "llama-2-7b-chat"
+base_model_path: "meta-llama/Llama-2-7b-hf"
+aligned_model_path: "meta-llama/Llama-2-7b-chat-hf"
+save_every_epoch: true
+dataset: 'alpaca_dataset'
+mode: '1k_p_0.0'

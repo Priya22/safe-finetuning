@@ -10,7 +10,7 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 import yaml
 from box import Box
-import fire
+# import fire
 import torch
 import torch.distributed as dist
 import torch.optim as optim
@@ -58,7 +58,7 @@ import torch
 from transformers import AutoModelForCausalLM
 from tqdm import tqdm
 
-BASE_PATH = "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/AsFT/ckpts"
+BASE_PATH = "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/AsFT/"
 ## ^ for local models -- we don't want that
 
 def load_config(yaml_path): 
@@ -69,59 +69,39 @@ def load_config(yaml_path):
 class SafeLoRA:
     def __init__(self, peft_model: torch.nn.Module, config):
         super().__init__()
+        self.peft_model = peft_model
         self.config = config
         self.peft_config = peft_model.peft_config["default"]
-        self.peft_model = peft_model
-        #self.model_ori = copy.deepcopy(peft_model)
+        self.model_ori = copy.deepcopy(peft_model)
+        self.project_matrix = self.get_aligned_matrix()
 
-        aligned = AutoModelForCausalLM.from_pretrained(
-            self.config.aligned_model_path,
-            return_dict=True,
-            load_in_8bit=False,
-            device_map="cpu",
-            low_cpu_mem_usage=True,
-            local_files_only=True, #why?
-        )
-        
-        aligned_weights = {n: p.data.clone() for n, p in aligned.named_parameters()
-                            if any(m in n for m in self.peft_config.target_modules)}
-        del aligned
-        import gc
-        gc.collect()        
-        
-        base = AutoModelForCausalLM.from_pretrained(
+    def get_aligned_matrix(self):
+
+        self.base_model = AutoModelForCausalLM.from_pretrained(
             self.config.base_model_path,
             return_dict=True,
             load_in_8bit=False,
             device_map="cpu",
             low_cpu_mem_usage=True,
-            local_files_only=True, #why?
         )
-        
-        self.project_matrix = []
-        for name, b_param in base.named_parameters():
-            if name in aligned_weights:
-                vec = aligned_weights[name] - b_param.data
+        self.aligned_model = AutoModelForCausalLM.from_pretrained(
+            self.config.aligned_model_path,
+            return_dict=True,
+            load_in_8bit=False,
+            device_map="cpu",
+            low_cpu_mem_usage=True,
+        )
+
+        v = []
+        proj_modules = list(self.peft_config.target_modules)
+        for (b_name, b_param), (a_name, a_param) in zip(self.base_model.named_parameters(), self.aligned_model.named_parameters()):
+            if any(module in a_name for module in proj_modules):
+                vec = a_param - b_param
                 vec = vec.to(self.config.devices)
-                if vec.dim() ==1: vec = vec.unsqueeze(0)
-                
-                res = torch.mm(vec, vec.t()) / (torch.norm(vec) + 1e-8)
-                
-                # Perform math on GPU if possible to speed up, then move back to CPU
-                vec_cuda = vec.to(self.config.devices)
-                res = torch.mm(vec_cuda, vec_cuda.t()) / (torch.norm(vec_cuda) + 1e-8)
-                self.project_matrix.append(res.cpu())
-                
-                del vec_cuda # Clear GPU temp var
-        
-        import gc
-        del base
-        del aligned_weights
-        gc.collect()
-        torch.cuda.empty_cache()
-    
-    def get_aligned_matrix(self):
-        return self.project_matrix
+                vec = torch.mm(vec, vec.t()) / torch.norm(vec)
+                v.append(vec.detach().cpu())
+        return v
+
 
 class SafeLoRAConfig:
     def __init__(self, base_model_path, aligned_model_path, device):
@@ -149,13 +129,15 @@ def main(config_path=None, save_folder=None, **kwargs):
         #aligned_model_path=config.aligned_model_path,
         
         # Use this if using locally downloaded models
-        base_model_path=os.path.join(BASE_PATH, config.base_model_path),
-        aligned_model_path=os.path.join(BASE_PATH, config.aligned_model_path),
+        base_model_path=config.base_model_path,
+        aligned_model_path=config.aligned_model_path,
         device='cuda' if torch.cuda.is_available() else 'cpu'
     )
     # Set the seeds for reproducibility
     torch.cuda.manual_seed(train_config.seed)
     torch.manual_seed(train_config.seed)
+
+    print(safe_config.base_model_path, safe_config.aligned_model_path)
 
     if train_config.enable_fsdp:
         setup()
@@ -205,7 +187,6 @@ def main(config_path=None, save_folder=None, **kwargs):
         print("--> Loading Aligned Model...")
         model = LlamaForCausalLM.from_pretrained(
             safe_config.aligned_model_path,
-            local_files_only=True,
             load_in_8bit=True if train_config.quantization else None,
             device_map="auto" if train_config.quantization else None,
             use_cache=use_cache,
@@ -236,7 +217,7 @@ def main(config_path=None, save_folder=None, **kwargs):
         model.to(torch.bfloat16)
 
     # Load the tokenizer and add special tokens
-    tokenizer = LlamaTokenizer.from_pretrained(safe_config.aligned_model_path, local_files_only=True)
+    tokenizer = LlamaTokenizer.from_pretrained(safe_config.aligned_model_path)
     tokenizer.pad_token = tokenizer.eos_token
     dataset_config = generate_dataset_config(train_config, kwargs)
 
@@ -323,8 +304,6 @@ def main(config_path=None, save_folder=None, **kwargs):
     train_dataloader = torch.utils.data.DataLoader(
         dataset_train,
         batch_size=train_config.batch_size_training,
-        num_workers=train_config.num_workers_dataloader,
-        pin_memory=True,
         sampler=train_sampler if train_sampler else None,
         drop_last=True,
         collate_fn=default_data_collator,
@@ -377,5 +356,5 @@ def main(config_path=None, save_folder=None, **kwargs):
     if not train_config.enable_fsdp or rank==0:
         [print(f'Key: {k}, Value: {v}') for k, v in results.items()]
 
-if __name__ == "__main__":
-    fire.Fire(main)
+# if __name__ == "__main__":
+    # fire.Fire(main)

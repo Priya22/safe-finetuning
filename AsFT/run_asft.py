@@ -46,6 +46,8 @@ from utils.AsFT_train_utils import (
     # get_policies
 )
 
+from utils.dataset_utils import StandardDataset
+
 import copy
 
 import numpy
@@ -141,19 +143,11 @@ def main(config_path, save_folder):
 
     model = AutoModelForCausalLM.from_pretrained(
         config.aligned_model_path,
-        torch_dtype=dtype_map[config.dtype]
     )
 
     # Load the tokenizer and add special tokens
     tokenizer = AutoTokenizer.from_pretrained(config.aligned_model_path)
-
-    tokenizer.add_special_tokens(
-            {
-
-                "pad_token": "<PAD>",
-            }
-        )
-    ## do we need?
+    tokenizer.pad_token = tokenizer.unk_token
 
     ################################# load dataset
     dataset = datasets.load_from_disk(dataset_path = config.data_path)
@@ -164,7 +158,22 @@ def main(config_path, save_folder):
     og_cols = list(train_ds.column_names)
     train_ds = train_ds.map(template_func, remove_columns=og_cols)
     val_ds = val_ds.map(template_func, remove_columns=og_cols)
+
+    train_dataset = StandardDataset(train_ds, tokenizer, max_words=config.max_seq_length)
+    val_dataset = StandardDataset(val_ds, tokenizer, max_words=config.max_seq_length)
     
+    train_dataloader = torch.utils.data.DataLoader(
+        train_dataset,
+        batch_size=config.per_device_train_batch_size,
+        drop_last=True,
+        collate_fn=default_data_collator,
+    )
+    eval_dataloader = torch.utils.data.DataLoader(
+            val_dataset,
+            batch_size=config.per_device_eval_batch_size,
+            drop_last=True,
+            collate_fn=default_data_collator,
+    )
     # if train_config.use_peft:
 
     peft_config = LoraConfig(
@@ -183,25 +192,6 @@ def main(config_path, save_folder):
     model.print_trainable_parameters()
    
     model.to(safe_config.device)
-
-    
-    # Create DataLoaders for the training and validation dataset
-    train_dataloader = torch.utils.data.DataLoader(
-        train_ds,
-        batch_size=config.per_device_train_batch_size,
-        pin_memory=True,
-        drop_last=True,
-        collate_fn=default_data_collator,
-    )
-
-    
-    eval_dataloader = torch.utils.data.DataLoader(
-        val_ds,
-        batch_size=config.per_device_eval_batch_size,
-        pin_memory=True,
-        drop_last=True,
-        collate_fn=default_data_collator,
-    )
     
 
     # Initialize the optimizer and learning rate scheduler

@@ -43,3 +43,40 @@ def get_preprocessed_dataset(
         tokenizer,
         get_split(),
     )
+
+class StandardDataset:
+
+  def __init__(self, text_ds, tokenizer, max_words=30):
+        self.ann = text_ds
+        self.max_words = max_words
+        self.tokenizer = tokenizer
+
+  def __len__(self):
+      return len(self.ann)
+
+  def __getitem__(self, index):
+      IGNORE_INDEX = -100  # The default setting in CrossEntropyLoss
+
+      ann = self.ann[index]
+      prompt_enc = self.tokenizer.apply_chat_template([ann['prompt'][0]], tokenize=True, add_generation_prompt=False, \
+                                                      dtype=torch.int64, return_tensors="pt")[0]
+
+      example = self.tokenizer.apply_chat_template([ann['prompt'][0], ann['completion'][0]], tokenize=True, \
+                                                   add_generation_prompt=False, truncation=True, padding='max_length', \
+                                                   max_length=self.max_words, return_tensors="pt", dtype=torch.int64)[0]
+      example[example.eq(0)] = -1
+      
+      labels = copy.deepcopy(example)
+      labels[: len(prompt_enc)] = -1
+      example_mask = example.ge(0)
+      label_mask = labels.ge(0)
+      example[~example_mask] = 0
+      labels[~label_mask] = IGNORE_INDEX
+      example_mask = example_mask.float()
+      label_mask = label_mask.float()
+
+      return {
+          "input_ids": example,
+          "labels": labels,
+          "attention_mask":example_mask,
+      }
