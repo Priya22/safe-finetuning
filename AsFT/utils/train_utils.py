@@ -7,7 +7,6 @@ from typing import List
 import yaml
 import time
 
-import fire
 import torch
 import transformers
 from datasets import load_dataset

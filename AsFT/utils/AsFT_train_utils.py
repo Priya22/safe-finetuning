@@ -79,7 +79,8 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
             train_config.output_dir = os.path.join(output_dir,f"-epoch={epoch+1}")
 
         epoch_start_time = time.perf_counter()
-        with MemoryTrace() as memtrace:  # track the memory usage
+        # with MemoryTrace() as memtrace:  # track the memory usage
+        if True:
             model.train()
             total_loss = 0.0
             total_length = len(train_dataloader)//gradient_accumulation_steps
@@ -134,11 +135,11 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
         train_loss.append(train_epoch_loss)
         
         
-        print(f"Max CUDA memory allocated was {memtrace.peak} GB")
-        print(f"Max CUDA memory reserved was {memtrace.max_reserved} GB")
-        print(f"Peak active CUDA memory was {memtrace.peak_active_gb} GB")
-        print(f"Cuda Malloc retires : {memtrace.cuda_malloc_retires}")
-        print(f"CPU Total Peak Memory consumed during the train (max): {memtrace.cpu_peaked + memtrace.cpu_begin} GB")
+        # print(f"Max CUDA memory allocated was {memtrace.peak} GB")
+        # print(f"Max CUDA memory reserved was {memtrace.max_reserved} GB")
+        # print(f"Peak active CUDA memory was {memtrace.peak_active_gb} GB")
+        # print(f"Cuda Malloc retires : {memtrace.cuda_malloc_retires}")
+        # print(f"CPU Total Peak Memory consumed during the train (max): {memtrace.cpu_peaked + memtrace.cpu_begin} GB")
         
         # Update the learning rate as needed
         lr_scheduler.step() # For Pytorch lr schedulers (update lr after each epoch)
@@ -204,7 +205,8 @@ def evaluation(model,train_config, eval_dataloader, local_rank, tokenizer):
     # ct = 0
     eval_preds = []
     eval_loss = 0.0  # Initialize evaluation loss
-    with MemoryTrace() as memtrace:
+    # with MemoryTrace() as memtrace:
+    if True:
         for step, batch in enumerate(tqdm(eval_dataloader,colour="green", desc="evaluating Epoch")):
             for key in batch.keys():
                

@@ -23,27 +23,27 @@ from transformers import (
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer
 import datasets
-import policies
+# import policies
 # from configs import fsdp_config, train_config
-from configs import train_config
-from policies import AnyPrecisionAdamW
+# from configs import train_config
+# from policies import AnyPrecisionAdamW
 
 # from utils import fsdp_auto_wrap_policy
-from utils.config_utils import (
-    update_config,
-    generate_peft_config,
-    generate_dataset_config,
-)
-from utils.dataset_utils import get_preprocessed_dataset
+# from utils.config_utils import (
+#     update_config,
+#     generate_peft_config,
+#     generate_dataset_config,
+# )
+# from utils.dataset_utils import get_preprocessed_dataset
 
 from utils.AsFT_train_utils import (
     train,
-    freeze_transformer_layers,
-    setup,
-    setup_environ_flags,
-    clear_gpu_cache,
-    print_model_size,
-    get_policies
+    # freeze_transformer_layers,
+    # setup,
+    # setup_environ_flags,
+    # clear_gpu_cache,
+    # print_model_size,
+    # get_policies
 )
 
 import copy
@@ -93,14 +93,12 @@ class SafeLoRA:
         base_model = AutoModelForCausalLM.from_pretrained(
             self.config.base_model_path,
             return_dict=True,
-            load_in_8bit=False,
             device_map="cpu",
             low_cpu_mem_usage=True,
         )
         aligned_model = AutoModelForCausalLM.from_pretrained(
             self.config.aligned_model_path,
             return_dict=True,
-            load_in_8bit=False,
             device_map="cpu",
             low_cpu_mem_usage=True,
         )
@@ -111,7 +109,7 @@ class SafeLoRA:
             if any(module in a_name for module in proj_modules):
                 assert b_param.shape == a_param.shape, "The dimensions of the base model's weight should be the same with the aligned model's weight."
                 vec = a_param - b_param
-                vec = vec.to(self.config.devices)
+                vec = vec.to(self.config.device)
                 vec = torch.mm(vec, vec.t()) / torch.norm(vec)
                 v.append(vec.detach().cpu())
         return v
@@ -121,7 +119,7 @@ class SafeLoRAConfig:
     def __init__(self, base_model_path, aligned_model_path, device):
         self.base_model_path = base_model_path 
         self.aligned_model_path = aligned_model_path  
-        self.devices = device  
+        self.device = device  
 
 def main(config_path, save_folder):
     
@@ -143,7 +141,7 @@ def main(config_path, save_folder):
 
     model = AutoModelForCausalLM.from_pretrained(
         config.aligned_model_path,
-        dtype=dtype_map[config.dtype]
+        torch_dtype=dtype_map[config.dtype]
     )
 
     # Load the tokenizer and add special tokens
@@ -158,7 +156,7 @@ def main(config_path, save_folder):
     ## do we need?
 
     ################################# load dataset
-    dataset = datasets.load_from_disk(data_path = config.data_path)
+    dataset = datasets.load_from_disk(dataset_path = config.data_path)
     train_ds = dataset['train']
     val_ds = dataset['test']
 
@@ -181,7 +179,7 @@ def main(config_path, save_folder):
     
     model = get_peft_model(model, peft_config)
     safelora = SafeLoRA(model, safe_config)
-    project_matrix = safelora.get_aligned_matrix()
+    project_matrix = safelora.project_matrix
     model.print_trainable_parameters()
    
     model.to(safe_config.device)
@@ -199,7 +197,7 @@ def main(config_path, save_folder):
     
     eval_dataloader = torch.utils.data.DataLoader(
         val_ds,
-        batch_size=train_config.per_device_eval_batch_size,
+        batch_size=config.per_device_eval_batch_size,
         pin_memory=True,
         drop_last=True,
         collate_fn=default_data_collator,

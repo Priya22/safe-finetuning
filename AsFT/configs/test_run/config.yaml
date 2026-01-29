@@ -4,7 +4,7 @@ dtype: "bfloat16"
 device: "cuda"
 model_name: "llama-2-7b-chat"
 base_model_path: "meta-llama/Llama-2-7b-hf"
-aligned_model_path: "TheBloke/Llama-2-7B-Chat-fp16"
+aligned_model_path: "meta-llama/Llama-2-7b-chat-hf"
 lora_rank: 8
 lora_alpha: 32
 target_modules:
@@ -18,6 +18,8 @@ num_epochs: 2
 data_path: "/content/drive/MyDrive/CAISI_phase2/safe-finetuning/ft_datasets/alpaca_clean_sample_15k"
 data_template: "alpaca"
 lambda_reg: 1.
+weight_decay: 0.
+gamma: 0.85
 gradient_accumulation_steps: 1
 save_every_epoch: true
 use_peft: true
